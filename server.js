@@ -10,16 +10,25 @@ MongoClient.connect(
     console.log("Connected to Database");
     const db = client.db("star-wars-quotes");
     const quotesCollection = db.collection("quotes");
+    // =========================
+    // MIDDLEWARES
+    // =========================
     app.set("view engine", "ejs");
     app.use(bodyParser.urlencoded({ extended: true })); ///need more explanation of this.
+    app.use(bodyParser.json());
+    app.use(express.static("public"));
+
+    // =========================
+    // ROUTES
+    // =========================
     app.get("/", (req, res) => {
       // res.sendFile(__dirname + "/index.html");
       db.collection("quotes")
         .find()
         .toArray()
-        .then((results) => {
-          console.log(results);
-          res.render("index.ejs", { quotes: results });
+        .then((quotes) => {
+          console.log(quotes);
+          res.render("index.ejs", { quotes: quotes });
         })
         .catch((error) => console.error(error));
       // ...
@@ -32,6 +41,39 @@ MongoClient.connect(
           res.redirect("/");
         })
         .catch((error) => console.timeLog(error));
+    });
+
+    app.put("/quotes", (req, res) => {
+      console.log(req.body);
+      quotesCollection
+        .findOneAndUpdate(
+          { name: "Yoda" },
+          {
+            $set: {
+              name: req.body.name,
+              quote: req.body.quote,
+            },
+          },
+          {
+            upsert: true,
+          }
+        )
+        .then((result) => {
+          res.json("success");
+        })
+        .catch((error) => console.error(error));
+    });
+
+    app.delete("/quotes", (req, res) => {
+      quotesCollection
+        .deleteOne({ name: req.body.name })
+        .then((result) => {
+          if (result.deletedCount === 0) {
+            return res.json("No quote to delete");
+          }
+          res.json(`Deleted Darth Vader's quote`);
+        })
+        .catch((error) => console.log(error));
     });
 
     app.listen(3000, function () {
